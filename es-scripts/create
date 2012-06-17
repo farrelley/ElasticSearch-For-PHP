@@ -1,0 +1,57 @@
+# Create new Indexs
+curl -XPOST 'http://localhost:9200/lse'
+curl -XPOST 'http://localhost:9200/rdu'
+curl -XPOST 'http://localhost:9200/dfw'
+
+# Brewery Mapping
+curl -XPOST 'http://localhost:9200/lse,rdu,dfw/brewery/_mapping' -d '
+{
+    "brewery" : {
+        "properties" : {
+            "id" : { "type" : "string" },
+            "name" : { "type" : "string", "store" : "yes", "index" : "not_analyzed" },
+            "established" : { "type" : "date", "format" : "YYYY" },
+            "isOrganic" : { "type" : "boolean" }
+        }
+    }
+}
+'
+
+# Location Mapping
+curl -XPOST 'http://localhost:9200/lse,rdu,dfw/location/_mapping' -d '
+{
+    "location" : {
+        "properties" : {
+            "id" : { "type" : "string" },
+            "breweryId" : { "type" : "string" },
+            "address" : {
+                "properties" : {
+                    "streetAddress" : { "type" : "string" },
+                    "locality" : { "type" : "string" },
+                    "regon" : { "type" : "string" },
+                    "postalCode" : { "type" : "string" },
+                    "geo" : { "type" : "geo_point" }
+                }
+            },
+            "inPlanning" : { "type" : "boolean" },
+            "isClosed" : { "type" : "boolean" },
+            "openToPublic" : { "type" : "boolean" }
+        }
+    }
+}
+'
+
+# Beer Mapping
+curl -XPOST 'http://localhost:9200/lse,rdu,dfw/beer/_mapping' -d '
+{
+    "location" : {
+        "properties" : {
+            "id" : { "type" : "string" },
+            "breweryId" : { "type" : "string" },
+            "name" : { "type" : "string", "store" : "yes", "index" : "not_analyzed" },
+            "abv" : { "type" : "float" },
+            "style" : { "type" : "string", "store" : "yes", "index" : "not_analyzed" }
+        }
+    }
+}
+'
