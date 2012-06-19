@@ -12,60 +12,101 @@ $params = array(
     'lng' => $config->location->lng,
     'radius' => $config->location->radius,
 );
-
 $request = $client->get('search/geo/point?' . http_build_query($params));
 $response = $request->send();
-
 $data = $response->getBody();
-
 $locations = json_decode($data);
 
-foreach ($locations->data as $location) {
+foreach ($locations->data as $location) {   
 
-    // Get all breweries
-    $breweries = array(
-        'id'          => $location->brewery->id,
-        'name'        => $location->brewery->name,
-        'established' => $location->brewery->established,
-        'isOrganic'   => $location->brewery->isOrganic,
+    // Brewery Information
+    $loc[$location->brewery->id]["brewery"] = array(
+        "name"        => $location->brewery->name,
+        "established" => isset($location->brewery->established) ? $location->brewery->established : null,
+        "isOrganic"   => $location->brewery->isOrganic,
     );
 
-    // Get all brewery Locations
-    $breweryLocations = array(
-        'id'            => $location->id, 
-        'streetAddress' => $location->streetAddress,
-        'locality'      => $location->locality,
-        'regon'         => $location->region,
-        'postalCode'    => $location->postalCode,
-        'latitude'      => $location->latitude,
-        'longitude'     => $location->longitude,
-        'inPlanning'    => $location->inPlanning,
-        'isClosed'      => $location->isClosed,
-        'openToPublic'  => $location->openToPublic,
-        'breweryId'     => $location->brewery->id,
+    // Brewery Locations
+    $loc[$location->brewery->id]["locations"][] = array(
+        "id" => $location->id,
+        "address" => array(
+            "streetAddress" => isset($location->streetAddress) ? $location->streetAddress : null,
+            "locality"      => $location->locality,
+            "regon"         => $location->region,
+            "postalCode"    => isset($location->postalCode) ? $location->postalCode : null,
+            "geo" => array(
+                'lat' => $location->latitude,
+                'lon' => $location->longitude,
+            )
+        )
     );
 
-    // Get brewery beers.  Another API Call for each brewery
+    // Brewery Beers
     $uri = "brewery/" . $location->brewery->id . "/beers";
-    echo $uri;
-
     $params = array(
         'key' => $config->key,
     );
     $beerRequest = $client->get($uri . "?" . http_build_query($params));
     $beerResponse = $beerRequest->send();
     $data = $beerResponse->getBody();
-
     $beers = json_decode($data);
-
-    foreach ($beers->data as $beer) {
-        var_dump($beer);
-        $breweryBeers[] = array(
-            'id' => $beer->id,
-            'name' => $beer->name,
-            'abv' => $beer->abv,
-            'style' => $beer->style->name,
-            'breweryId' => $location->brewery->id
-        );
+    if (isset($beers->data)) {
+        foreach ($beers->data as $beer) {
+            $loc[$location->brewery->id]["beer"][$beer->id] = array(
+                "name"    => $beer->name,
+                "abv"     => isset($beer->abv) ? $beer->abv : null,
+                "style"   => isset($beer->style->name) ? $beer->style->name : null,
+            );
+        }
     }
 }
+
+
+// Load up ES and get the index
+$elastica = new Elastica_Client();
+$index = $elastica->getIndex($config->location->airportCode);
+
+// Get Types
+$breweryType = $index->getType('brewery');
+$beerType = $index->getType('beer');
+
+foreach ($loc as $breweryId => $data) {
+
+    // Beers
+    if (!empty($data['beer'])) {
+        $breweryBeer = array();
+        foreach ($data['beer'] as $beerId => $beerData) {
+            $breweryBeer[] = array(
+                "id"   => $beerId,
+                "name" => $beerData['name']
+            );
+
+            $beerDoc[] = new Elastica_Document(
+                $beerId,
+                array(
+                    "name" => $beerData['name'],
+                    "abv" => $beerData['abv'],
+                    "style" => $beerData['style'],
+                    "brewery" => array(
+                        "id"  => $breweryId,
+                        "name"  => $data['brewery']['name'],
+                    )
+                )
+            );
+        }
+    }
+
+    $breweryDocs[] = new Elastica_Document(
+        $breweryId,
+        array(
+            "name" => $data['brewery']['name'],
+            "established" => $data['brewery']['established'],
+            "isOrganic" => $data['brewery']['isOrganic'],
+            "location" => $data['locations'],
+            "beer" => $breweryBeer,
+        )
+    );
+}
+
+$beerType->addDocuments($beerDoc);
+$breweryType->addDocuments($breweryDocs);
