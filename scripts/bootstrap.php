@@ -2,7 +2,7 @@
 $config = new stdClass();
 
 $config->elastica = "../elastica/lib/";
-$config->key = "acd6d75e17a5a5311c5eec7167f2b7f2";
+$config->key = "";
 $config->location->radius = 20;
 
 // La Crosse, WI
