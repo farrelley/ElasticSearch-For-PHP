@@ -1,5 +1,5 @@
 <?php
-require_once '../scripts/params.php';
+require_once '../scripts/bootstrap.php';
 
 $elastica = new Elastica_Client();
 $index = $elastica->getIndex($config->location->airportCode);
