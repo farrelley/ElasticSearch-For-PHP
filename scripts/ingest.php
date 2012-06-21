@@ -1,5 +1,5 @@
 <?php
-require_once 'params.php';
+require_once 'bootstrap.php';
 require_once '../includes/guzzle.phar';
 
 use Guzzle\Http\Client;
