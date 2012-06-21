@@ -1,0 +1,4 @@
+# Delete Indexes
+curl -XDELETE 'http://localhost:9200/lse'
+curl -XDELETE 'http://localhost:9200/rdu'
+curl -XDELETE 'http://localhost:9200/dfw'

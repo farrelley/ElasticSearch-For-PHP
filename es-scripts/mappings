@@ -1,0 +1,60 @@
+# Brewery Mapping
+curl -XPOST 'http://localhost:9200/lse,rdu,dfw/brewery/_mapping' -d '
+{
+    "brewery" : {
+        "properties" : {
+            "name" : { "type" : "string", "store" : "yes", "index" : "not_analyzed" },
+            "established" : { "type" : "date", "format" : "YYYY" },
+            "isOrganic" : { "type" : "boolean" },
+            "location" : {
+                "properties" : {
+                    "id" : { "type" : "string" },
+                    "address" : {
+                        "properties" : {
+                            "streetAddress" : { "type" : "string" },
+                            "locality" : { "type" : "string" },
+                            "regon" : { "type" : "string" },
+                            "postalCode" : { "type" : "string" },
+                            "geo" : { "type" : "geo_point" }
+                        }
+                    },
+                    "inPlanning" : { "type" : "boolean" },
+                    "isClosed" : { "type" : "boolean" },
+                    "openToPublic" : { "type" : "boolean" }
+                }
+            },
+            "beer" : {
+                "properties" : {
+                    "id" : { "type" : "string" },
+                    "name" : { "type" : "string", "index": "not_analyzed" }
+                }
+            }
+        }
+    }
+}
+'
+
+# Beer Mapping
+curl -XPOST 'http://localhost:9200/lse,rdu,dfw/beer/_mapping' -d '
+{
+    "beer" : {
+        "properties" : {
+            "name" : { "type" : "string", "store" : "yes", "index" : "not_analyzed" },
+            "abv" : { "type" : "float" },
+            "style" : { 
+                "type" : "multi_field",
+                "fields" : {
+                    "style" : { "type" : "string" },
+                    "untouched" : { "type" : "string", "index" : "not_analyzed" }
+                }
+            },
+            "brewery" : {
+                "properties" : {
+                    "id" : { "type" : "string", "index": "analyzed" },
+                    "name" : { "type" : "string", "index": "not_analyzed" }
+                }
+            }
+        }
+    }
+}
+'
